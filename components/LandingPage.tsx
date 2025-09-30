@@ -102,15 +102,28 @@ const LandingPage: React.FC<LandingPageProps> = ({ onFileSelect }) => {
       <Header />
       <main className="container mx-auto px-6 pt-32 pb-16">
         <div className="text-center max-w-4xl mx-auto">
-          <div className="inline-block bg-yellow-100 text-yellow-800 text-xs font-semibold px-3 py-1 rounded-full mb-4">
-            <span role="img" aria-label="star">⭐</span> Professional PDF Editor
+          <div className="inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full mb-4">
+            Your PDF command center — no installs, no uploads
           </div>
           <h1 className="text-5xl md:text-6xl font-extrabold text-gray-900 mb-6 tracking-tight">
-            Transform Your <br /> PDF Workflow
+            Fix, reorder, and export PDFs in minutes
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-12">
-            Enterprise-grade PDF editing tools that work entirely in your browser. Edit, merge, and optimize documents with professional precision.
+          <p className="text-lg text-gray-600 max-w-2xl mx-auto mb-6">
+            PDF Editor Pro helps you clean up messy scans, merge contracts, insert blank pages, or rotate that sideways slide deck — all securely inside your browser.
           </p>
+          <div className="flex flex-col md:flex-row items-center justify-center gap-4 text-sm text-gray-500 mb-12">
+            <div className="flex items-center gap-2">
+              <LightningIcon className="w-4 h-4 text-gray-400" /> drag pages to reorder instantly
+            </div>
+            <div className="hidden md:block h-4 w-px bg-gray-300" />
+            <div className="flex items-center gap-2">
+              <ShieldIcon className="w-4 h-4 text-gray-400" /> documents stay on your device
+            </div>
+            <div className="hidden md:block h-4 w-px bg-gray-300" />
+            <div className="flex items-center gap-2">
+              <CheckIcon className="w-4 h-4 text-gray-400" /> export a polished PDF in one click
+            </div>
+          </div>
         </div>
 
         <div className="max-w-3xl mx-auto mb-20">
@@ -118,14 +131,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onFileSelect }) => {
         </div>
 
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <FeatureCard icon={<LightningIcon className="w-6 h-6 text-gray-600" />} title="Lightning Fast">
-            Process documents instantly with optimized client-side performance
+          <FeatureCard icon={<LightningIcon className="w-6 h-6 text-gray-600" />} title="Reorder without limits">
+            Drag and drop pages, insert blanks, or merge files until everything is in the right spot.
           </FeatureCard>
-          <FeatureCard icon={<ShieldIcon className="w-6 h-6 text-gray-600" />} title="100% Secure">
-            Your documents never leave your browser - complete privacy guaranteed
+          <FeatureCard icon={<ShieldIcon className="w-6 h-6 text-gray-600" />} title="Stay in control">
+            Nothing is uploaded to a server — edits happen locally for total confidentiality.
           </FeatureCard>
-          <FeatureCard icon={<CheckIcon className="w-6 h-6 text-gray-600" />} title="Professional Quality">
-            Enterprise-grade tools for perfect document manipulation
+          <FeatureCard icon={<CheckIcon className="w-6 h-6 text-gray-600" />} title="Ship it polished">
+            Rotate, refine, and export a clean PDF that’s ready for clients, classmates, or court filings.
           </FeatureCard>
         </div>
         
