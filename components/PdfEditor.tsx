@@ -1,5 +1,19 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { DragDropContext, Droppable, Draggable } from 'react-beautiful-dnd';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import {
+  DndContext,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { PDFDocument, rgb, degrees } from 'pdf-lib';
 import { EditablePage, PageAction } from '../types';
 import { UploadIcon, RotateIcon, DownloadIcon, TrashIcon, PlusIcon } from './icons';
@@ -45,59 +59,75 @@ const SidebarThumbnail: React.FC<{
   onSelect: () => void;
   onRotate: () => void;
   onDelete: () => void;
-}> = ({ page, index, isSelected, onSelect, onRotate, onDelete }) => {
+  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
+}> = ({ page, index, isSelected, onSelect, onRotate, onDelete, dragHandleProps }) => {
   return (
     <div className="relative group">
       <div
-        className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer border-2 ${
+        className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-all border-2 ${
           isSelected ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
         }`}
-        onClick={onSelect}
       >
-        <div className="p-1.5">
-          {page.isBlank ? (
-            <div className="w-full aspect-[3/4] bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300">
-              <span className="text-gray-500 text-xs font-medium">Blank</span>
+        {/* Drag Handle */}
+        <div 
+          {...dragHandleProps}
+          className="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center cursor-grab active:cursor-grabbing bg-gray-100 hover:bg-gray-200 transition-colors rounded-l-lg opacity-0 group-hover:opacity-100"
+          title="Drag to reorder"
+        >
+          <svg className="w-3 h-3 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
+          </svg>
+        </div>
+        
+        <div 
+          className="pl-1 cursor-pointer"
+          onClick={onSelect}
+        >
+          <div className="p-1.5">
+            {page.isBlank ? (
+              <div className="w-full aspect-[3/4] bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300">
+                <span className="text-gray-500 text-xs font-medium">Blank</span>
+              </div>
+            ) : (
+              <img 
+                src={page.thumbnailUrl} 
+                alt={`Page ${page.pageNumber}`} 
+                className="w-full aspect-[3/4] object-contain rounded border"
+                style={{ transform: `rotate(${page.rotation}deg)` }}
+              />
+            )}
+          </div>
+          <div className="flex items-center justify-between p-1.5 pt-0">
+            <span className="text-xs font-medium text-gray-700">Page {page.pageNumber}</span>
+            <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRotate();
+                }}
+                className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                title="Rotate 90°"
+              >
+                <RotateIcon className="w-3 h-3 text-gray-600" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                className="p-1 rounded-full hover:bg-red-100 transition-colors"
+                title="Delete Page"
+              >
+                <TrashIcon className="w-3 h-3 text-red-600" />
+              </button>
             </div>
-          ) : (
-            <img 
-              src={page.thumbnailUrl} 
-              alt={`Page ${page.pageNumber}`} 
-              className="w-full aspect-[3/4] object-contain rounded border"
-              style={{ transform: `rotate(${page.rotation}deg)` }}
-            />
+          </div>
+          {page.rotation !== 0 && (
+            <div className="absolute top-3 right-3 bg-gray-800 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center pointer-events-none">
+              {page.rotation}°
+            </div>
           )}
         </div>
-        <div className="flex items-center justify-between p-1.5 pt-0">
-          <span className="text-xs font-medium text-gray-700">Page {page.pageNumber}</span>
-          <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onRotate();
-              }}
-              className="p-1 rounded-full hover:bg-gray-200 transition-colors"
-              title="Rotate 90°"
-            >
-              <RotateIcon className="w-3 h-3 text-gray-600" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              className="p-1 rounded-full hover:bg-red-100 transition-colors"
-              title="Delete Page"
-            >
-              <TrashIcon className="w-3 h-3 text-red-600" />
-            </button>
-          </div>
-        </div>
-        {page.rotation !== 0 && (
-          <div className="absolute top-3 right-3 bg-gray-800 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center pointer-events-none">
-            {page.rotation}°
-          </div>
-        )}
       </div>
     </div>
   );
@@ -116,6 +146,44 @@ const InsertPageButton: React.FC<{
       >
         <PlusIcon className="w-3 h-3" />
       </button>
+    </div>
+  );
+};
+
+const SortableThumbnail: React.FC<{
+  page: EditablePage;
+  index: number;
+  isSelected: boolean;
+  onSelect: () => void;
+  onRotate: () => void;
+  onDelete: () => void;
+}> = ({ page, index, isSelected, onSelect, onRotate, onDelete }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: page.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.75 : 1,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style} className="mb-2">
+      <SidebarThumbnail
+        page={page}
+        index={index}
+        isSelected={isSelected}
+        onSelect={onSelect}
+        onRotate={onRotate}
+        onDelete={onDelete}
+        dragHandleProps={{ ...listeners, ...attributes }}
+      />
     </div>
   );
 };
@@ -193,7 +261,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
               }
               
               return {
-                id: `page-${files.length - 1}-${i}`,
+                id: `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${i}`,
                 originalIndex: i,
                 sourceFileIndex: files.length - 1,
                 rotation: 0,
@@ -236,16 +304,33 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files, updatePageNumbers]);
 
-  const onDragEnd = (result: any) => {
-    if (!result.destination) return;
-    
-    const items = Array.from(pages);
-    const [reorderedItem] = items.splice(result.source.index, 1);
-    items.splice(result.destination.index, 0, reorderedItem);
-    
-    const reorderedPages = updatePageNumbers(items);
-    setPages(reorderedPages);
-  };
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5,
+      },
+    })
+  );
+
+  const handleDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) {
+        return;
+      }
+
+      const oldIndex = pages.findIndex(page => page.id === active.id);
+      const newIndex = pages.findIndex(page => page.id === over.id);
+
+      if (oldIndex === -1 || newIndex === -1) {
+        return;
+      }
+
+      const reordered = arrayMove(pages, oldIndex, newIndex);
+      setPages(updatePageNumbers(reordered));
+    },
+    [pages, updatePageNumbers]
+  );
 
   const handleRotate = (pageId: string) => {
     setPages(prevPages => {
@@ -383,63 +468,30 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
           </div>
           
           <div className="flex-1 overflow-y-auto p-3">
-            <DragDropContext onDragEnd={onDragEnd}>
-              <Droppable 
-                droppableId="pages" 
-                direction="vertical" 
-                isDropDisabled={false} 
-                isCombineEnabled={false}
-                ignoreContainerClipping={false}
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={pages.map(page => page.id)}
+                strategy={verticalListSortingStrategy}
               >
-                {(provided) => (
-                  <div
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                    className="space-y-2"
-                  >
-                    {pages.map((page, index) => (
-                      <Draggable 
-                        key={page.id}
-                        draggableId={page.id} 
-                        index={index} 
-                        isDragDisabled={false} 
-                        isCombineEnabled={false}
-                        ignoreContainerClipping={false}
-                      >
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            className={`${snapshot.isDragging ? 'z-50' : ''}`}
-                          >
-                            <SidebarThumbnail
-                              page={page}
-                              index={index}
-                              isSelected={selectedPageId === page.id}
-                              onSelect={() => setSelectedPageId(page.id)}
-                              onRotate={() => handleRotate(page.id)}
-                              onDelete={() => handleDelete(page.id)}
-                            />
-                            
-                            {/* Insert button after each page */}
-                            {index < pages.length - 1 && (
-                              <div className="group mt-1">
-                                <InsertPageButton
-                                  onInsert={() => handleInsertBlank(index)}
-                                  isVisible={false}
-                                />
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </Draggable>
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
+                <div className="space-y-2">
+                  {pages.map((page, index) => (
+                    <SortableThumbnail
+                      key={page.id}
+                      page={page}
+                      index={index}
+                      isSelected={selectedPageId === page.id}
+                      onSelect={() => setSelectedPageId(page.id)}
+                      onRotate={() => handleRotate(page.id)}
+                      onDelete={() => handleDelete(page.id)}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           </div>
           
           {/* Add New PDF Button */}
@@ -455,12 +507,12 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 bg-gray-50 flex flex-col">
+        <div className="flex-1 bg-gray-50 flex flex-col overflow-hidden">
           {selectedPage ? (
-            <div className="flex-1 flex items-start justify-center p-4 overflow-auto">
-              <div className="w-full max-w-6xl">
+            <div className="flex-1 flex items-center justify-center p-4">
+              <div className="w-full h-full max-w-6xl flex items-center justify-center">
                 {selectedPage.isBlank ? (
-                  <div className="w-full min-h-[600px] bg-white border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center shadow-sm">
+                  <div className="w-full h-full bg-white border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center shadow-sm">
                     <div className="text-center">
                       <div className="text-4xl text-gray-400 mb-3">📄</div>
                       <h3 className="text-xl font-semibold text-gray-600 mb-2">Blank Page</h3>
@@ -468,12 +520,15 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
                     </div>
                   </div>
                 ) : (
-                  <div className="relative bg-white rounded-lg shadow-sm p-4">
+                  <div className="relative bg-white rounded-lg shadow-sm p-2 w-full h-full flex items-center justify-center">
                     <img
                       src={(selectedPage as EditablePageWithHighRes).highResUrl || selectedPage.thumbnailUrl}
                       alt={`Page ${selectedPage.pageNumber}`}
-                      className="w-full h-auto max-w-full object-contain mx-auto"
-                      style={{ transform: `rotate(${selectedPage.rotation}deg)` }}
+                      className="max-w-full max-h-full w-auto h-auto object-contain"
+                      style={{ 
+                        transform: `rotate(${selectedPage.rotation}deg)`,
+                        maxHeight: 'calc(100vh - 6rem)' // Account for header and padding
+                      }}
                     />
                     {selectedPage.rotation !== 0 && (
                       <div className="absolute top-2 right-2 bg-gray-800 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
