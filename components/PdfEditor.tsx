@@ -59,29 +59,19 @@ const SidebarThumbnail: React.FC<{
   onSelect: () => void;
   onRotate: () => void;
   onDelete: () => void;
-  dragHandleProps?: React.HTMLAttributes<HTMLDivElement>;
-}> = ({ page, index, isSelected, onSelect, onRotate, onDelete, dragHandleProps }) => {
+  dragProps?: React.HTMLAttributes<HTMLDivElement>;
+}> = ({ page, index, isSelected, onSelect, onRotate, onDelete, dragProps }) => {
   return (
     <div className="relative group">
       <div
+        {...dragProps}
         className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-all border-2 ${
           isSelected ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
         }`}
+        onClick={onSelect}
       >
-        {/* Drag Handle */}
-        <div 
-          {...dragHandleProps}
-          className="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center cursor-grab active:cursor-grabbing bg-gray-100 hover:bg-gray-200 transition-colors rounded-l-lg opacity-0 group-hover:opacity-100"
-          title="Drag to reorder"
-        >
-          <svg className="w-3 h-3 text-gray-600" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M7 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 2zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 7 14zm6-8a2 2 0 1 0-.001-4.001A2 2 0 0 0 13 6zm0 2a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 8zm0 6a2 2 0 1 0 .001 4.001A2 2 0 0 0 13 14z"></path>
-          </svg>
-        </div>
-        
         <div 
           className="pl-1 cursor-pointer"
-          onClick={onSelect}
         >
           <div className="p-1.5">
             {page.isBlank ? (
@@ -91,7 +81,7 @@ const SidebarThumbnail: React.FC<{
             ) : (
               <img 
                 src={page.thumbnailUrl} 
-                alt={`Page ${page.pageNumber}`} 
+                alt={`Page {page.pageNumber}`}
                 className="w-full aspect-[3/4] object-contain rounded border"
                 style={{ transform: `rotate(${page.rotation}deg)` }}
               />
@@ -182,7 +172,7 @@ const SortableThumbnail: React.FC<{
         onSelect={onSelect}
         onRotate={onRotate}
         onDelete={onDelete}
-        dragHandleProps={{ ...listeners, ...attributes }}
+        dragProps={{ ...listeners, ...attributes }}
       />
     </div>
   );
