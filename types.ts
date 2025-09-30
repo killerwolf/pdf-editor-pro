@@ -2,6 +2,7 @@
 export interface EditablePage {
   id: string;
   originalIndex: number;
+  sourceFileIndex?: number; // Index of the source PDF file
   rotation: number;
   thumbnailUrl: string;
   isBlank?: boolean;

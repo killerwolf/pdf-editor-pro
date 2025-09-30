@@ -8,8 +8,13 @@ import { UploadIcon, RotateIcon, DownloadIcon, TrashIcon, PlusIcon } from './ico
 declare const pdfjsLib: any;
 
 interface PdfEditorProps {
-  file: File;
+  files: File[];
   onReset: () => void;
+  onAddPdf: (file: File) => void;
+}
+
+interface EditablePageWithHighRes extends EditablePage {
+  highResUrl?: string;
 }
 
 const EditorHeader: React.FC<{ onReset: () => void; onDownload: () => void; isProcessing: boolean; fileName: string }> = ({ onReset, onDownload, isProcessing, fileName }) => {
@@ -40,8 +45,7 @@ const SidebarThumbnail: React.FC<{
   onSelect: () => void;
   onRotate: () => void;
   onDelete: () => void;
-  onInsertBlank: () => void;
-}> = ({ page, index, isSelected, onSelect, onRotate, onDelete, onInsertBlank }) => {
+}> = ({ page, index, isSelected, onSelect, onRotate, onDelete }) => {
   return (
     <div className="relative group">
       <div
@@ -50,42 +54,42 @@ const SidebarThumbnail: React.FC<{
         }`}
         onClick={onSelect}
       >
-        <div className="p-2">
+        <div className="p-1.5">
           {page.isBlank ? (
-            <div className="w-full h-32 bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300">
-              <span className="text-gray-500 text-sm font-medium">Blank Page</span>
+            <div className="w-full aspect-[3/4] bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300">
+              <span className="text-gray-500 text-xs font-medium">Blank</span>
             </div>
           ) : (
             <img 
               src={page.thumbnailUrl} 
               alt={`Page ${page.pageNumber}`} 
-              className="w-full h-32 object-contain rounded border"
+              className="w-full aspect-[3/4] object-contain rounded border"
               style={{ transform: `rotate(${page.rotation}deg)` }}
             />
           )}
         </div>
-        <div className="flex items-center justify-between p-2 pt-0">
-          <span className="text-sm font-medium text-gray-700">Page {page.pageNumber}</span>
+        <div className="flex items-center justify-between p-1.5 pt-0">
+          <span className="text-xs font-medium text-gray-700">Page {page.pageNumber}</span>
           <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onRotate();
               }}
-              className="p-1.5 rounded-full hover:bg-gray-200 transition-colors"
+              className="p-1 rounded-full hover:bg-gray-200 transition-colors"
               title="Rotate 90°"
             >
-              <RotateIcon className="w-4 h-4 text-gray-600" />
+              <RotateIcon className="w-3 h-3 text-gray-600" />
             </button>
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete();
               }}
-              className="p-1.5 rounded-full hover:bg-red-100 transition-colors"
+              className="p-1 rounded-full hover:bg-red-100 transition-colors"
               title="Delete Page"
             >
-              <TrashIcon className="w-4 h-4 text-red-600" />
+              <TrashIcon className="w-3 h-3 text-red-600" />
             </button>
           </div>
         </div>
@@ -95,15 +99,20 @@ const SidebarThumbnail: React.FC<{
           </div>
         )}
       </div>
-      
-      {/* Insert blank page button */}
+    </div>
+  );
+};
+
+const InsertPageButton: React.FC<{
+  onInsert: () => void;
+  isVisible: boolean;
+}> = ({ onInsert, isVisible }) => {
+  return (
+    <div className={`flex justify-center py-1 transition-opacity ${isVisible ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'}`}>
       <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onInsertBlank();
-        }}
-        className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-6 h-6 bg-blue-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-blue-600 flex items-center justify-center"
-        title="Insert blank page after this page"
+        onClick={onInsert}
+        className="w-6 h-6 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors flex items-center justify-center shadow-md"
+        title="Insert blank page here"
       >
         <PlusIcon className="w-3 h-3" />
       </button>
@@ -111,14 +120,15 @@ const SidebarThumbnail: React.FC<{
   );
 };
 
-const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
+const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
   const [pages, setPages] = useState<EditablePage[]>([]);
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Loading PDF...');
   const [isProcessing, setIsProcessing] = useState(false);
-  const pdfDocRef = useRef<any>(null); // pdf-lib document instance
-  const pdfjsDocRef = useRef<any>(null); // pdf.js document instance
+  const pdfDocRefs = useRef<any[]>([]); // pdf-lib document instances
+  const pdfjsDocRefs = useRef<any[]>([]); // pdf.js document instances
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update page numbers when pages change
   const updatePageNumbers = useCallback((pagesList: EditablePage[]) => {
@@ -130,39 +140,65 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
 
   useEffect(() => {
     const loadPdf = async () => {
+      if (files.length === 0) return;
+      
       try {
+        // If this is the first file, reset pages. If it's additional files, append to existing pages
+        if (files.length === 1) {
+          setPages([]);
+        }
+        
+        const file = files[files.length - 1]; // Process the most recently added file
         const arrayBuffer = await file.arrayBuffer();
 
         setLoadingMessage('Loading PDF document...');
         
         const pdfjsData = new Uint8Array(arrayBuffer.slice(0));
         const pdfJSDoc = await pdfjsLib.getDocument({ data: pdfjsData }).promise;
-        pdfjsDocRef.current = pdfJSDoc;
-        pdfDocRef.current = await PDFDocument.load(arrayBuffer);
+        const pdfDoc = await PDFDocument.load(arrayBuffer);
+        
+        // Store the PDF documents
+        pdfjsDocRefs.current[files.length - 1] = pdfJSDoc;
+        pdfDocRefs.current[files.length - 1] = pdfDoc;
 
         setLoadingMessage(`Generating ${pdfJSDoc.numPages} thumbnails...`);
 
-        const pagePromises: Promise<EditablePage>[] = [];
+        const pagePromises: Promise<EditablePageWithHighRes>[] = [];
         for (let i = 0; i < pdfJSDoc.numPages; i++) {
           const pageNum = i + 1;
           pagePromises.push(
             (async () => {
               const page = await pdfJSDoc.getPage(pageNum);
-              const viewport = page.getViewport({ scale: 0.3 });
-              const canvas = document.createElement('canvas');
-              const context = canvas.getContext('2d');
-              canvas.height = viewport.height;
-              canvas.width = viewport.width;
+              
+              // Generate thumbnail (low resolution)
+              const thumbnailViewport = page.getViewport({ scale: 0.3 });
+              const thumbnailCanvas = document.createElement('canvas');
+              const thumbnailContext = thumbnailCanvas.getContext('2d');
+              thumbnailCanvas.height = thumbnailViewport.height;
+              thumbnailCanvas.width = thumbnailViewport.width;
 
-              if (context) {
-                await page.render({ canvasContext: context, viewport: viewport }).promise;
+              if (thumbnailContext) {
+                await page.render({ canvasContext: thumbnailContext, viewport: thumbnailViewport }).promise;
+              }
+
+              // Generate high-resolution image for main view
+              const highResViewport = page.getViewport({ scale: 2.0 });
+              const highResCanvas = document.createElement('canvas');
+              const highResContext = highResCanvas.getContext('2d');
+              highResCanvas.height = highResViewport.height;
+              highResCanvas.width = highResViewport.width;
+
+              if (highResContext) {
+                await page.render({ canvasContext: highResContext, viewport: highResViewport }).promise;
               }
               
               return {
-                id: `page-${i}`,
+                id: `page-${files.length - 1}-${i}`,
                 originalIndex: i,
+                sourceFileIndex: files.length - 1,
                 rotation: 0,
-                thumbnailUrl: canvas.toDataURL('image/jpeg', 0.8),
+                thumbnailUrl: thumbnailCanvas.toDataURL('image/jpeg', 0.8),
+                highResUrl: highResCanvas.toDataURL('image/jpeg', 0.9),
                 isBlank: false,
                 pageNumber: i + 1
               };
@@ -172,11 +208,19 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
         
         const generatedPages = await Promise.all(pagePromises);
         const pagesWithNumbers = updatePageNumbers(generatedPages);
-        setPages(pagesWithNumbers);
         
-        // Select first page by default
-        if (pagesWithNumbers.length > 0) {
-          setSelectedPageId(pagesWithNumbers[0].id);
+        if (files.length === 1) {
+          // First file - replace all pages
+          setPages(pagesWithNumbers);
+          if (pagesWithNumbers.length > 0) {
+            setSelectedPageId(pagesWithNumbers[0].id);
+          }
+        } else {
+          // Additional file - append pages
+          setPages(prevPages => {
+            const combinedPages = [...prevPages, ...pagesWithNumbers];
+            return updatePageNumbers(combinedPages);
+          });
         }
 
       } catch (error) {
@@ -190,7 +234,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
     
     loadPdf();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [file, updatePageNumbers]);
+  }, [files, updatePageNumbers]);
 
   const onDragEnd = (result: any) => {
     if (!result.destination) return;
@@ -250,12 +294,22 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
   };
 
   const handleAddNewPdf = () => {
-    // This will trigger the file input in the parent component
-    onReset();
+    fileInputRef.current?.click();
+  };
+
+  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file && file.type === 'application/pdf') {
+      onAddPdf(file);
+    } else {
+      alert('Please select a valid PDF file.');
+    }
+    // Reset the input so the same file can be selected again
+    event.target.value = '';
   };
   
   const handleDownload = useCallback(async () => {
-    if (!pdfDocRef.current || pages.length === 0) {
+    if (pdfDocRefs.current.length === 0 || pages.length === 0) {
       alert("There are no pages to save. Please add a PDF.");
       return;
     }
@@ -269,11 +323,14 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
           const blankPage = newPdfDoc.addPage();
           // You can customize the blank page here if needed
         } else {
-          // Copy original page
-          const originalPage = pdfDocRef.current.getPage(pageInfo.originalIndex);
-          const [copiedPage] = await newPdfDoc.copyPages(pdfDocRef.current, [pageInfo.originalIndex]);
-          const newPage = newPdfDoc.addPage(copiedPage);
-          newPage.setRotation(degrees(pageInfo.rotation));
+          // Copy original page from the correct source PDF
+          const sourceFileIndex = pageInfo.sourceFileIndex || 0;
+          const sourcePdfDoc = pdfDocRefs.current[sourceFileIndex];
+          if (sourcePdfDoc) {
+            const [copiedPage] = await newPdfDoc.copyPages(sourcePdfDoc, [pageInfo.originalIndex]);
+            const newPage = newPdfDoc.addPage(copiedPage);
+            newPage.setRotation(degrees(pageInfo.rotation));
+          }
         }
       }
 
@@ -281,7 +338,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
       const blob = new Blob([pdfBytes], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      const originalName = file.name.replace(/\.pdf$/i, '');
+      const originalName = files[0]?.name.replace(/\.pdf$/i, '') || 'document';
       link.download = `${originalName}_edited.pdf`;
       document.body.appendChild(link);
       link.click();
@@ -294,7 +351,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
     } finally {
       setIsProcessing(false);
     }
-  }, [pages, file.name]);
+  }, [pages, files]);
 
   const selectedPage = pages.find(page => page.id === selectedPageId);
 
@@ -309,16 +366,23 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
 
   return (
     <>
-      <EditorHeader onReset={onReset} onDownload={handleDownload} isProcessing={isProcessing} fileName={file.name} />
+      <EditorHeader onReset={onReset} onDownload={handleDownload} isProcessing={isProcessing} fileName={files[0]?.name || 'PDF Document'} />
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".pdf"
+        onChange={handleFileInputChange}
+        className="hidden"
+      />
       <div className="flex h-screen pt-16">
         {/* Left Sidebar */}
-        <div className="w-80 bg-gray-50 border-r border-gray-200 flex flex-col">
-          <div className="p-4 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-800">Pages</h2>
-            <p className="text-sm text-gray-600">{pages.length} page{pages.length !== 1 ? 's' : ''}</p>
+        <div className="w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
+          <div className="p-3 border-b border-gray-200">
+            <h2 className="text-base font-semibold text-gray-800">Pages</h2>
+            <p className="text-xs text-gray-600">{pages.length} page{pages.length !== 1 ? 's' : ''}</p>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-4">
+          <div className="flex-1 overflow-y-auto p-3">
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable 
                 droppableId="pages" 
@@ -331,11 +395,11 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
                   <div
                     {...provided.droppableProps}
                     ref={provided.innerRef}
-                    className="space-y-3"
+                    className="space-y-2"
                   >
                     {pages.map((page, index) => (
                       <Draggable 
-                        key={page.id} 
+                        key={page.id}
                         draggableId={page.id} 
                         index={index} 
                         isDragDisabled={false} 
@@ -356,8 +420,17 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
                               onSelect={() => setSelectedPageId(page.id)}
                               onRotate={() => handleRotate(page.id)}
                               onDelete={() => handleDelete(page.id)}
-                              onInsertBlank={() => handleInsertBlank(index)}
                             />
+                            
+                            {/* Insert button after each page */}
+                            {index < pages.length - 1 && (
+                              <div className="group mt-1">
+                                <InsertPageButton
+                                  onInsert={() => handleInsertBlank(index)}
+                                  isVisible={false}
+                                />
+                              </div>
+                            )}
                           </div>
                         )}
                       </Draggable>
@@ -370,40 +443,40 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
           </div>
           
           {/* Add New PDF Button */}
-          <div className="p-4 border-t border-gray-200">
+          <div className="p-3 border-t border-gray-200">
             <button
               onClick={handleAddNewPdf}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
-              <PlusIcon className="w-4 h-4" />
+              <PlusIcon className="w-3 h-3" />
               Add New PDF
             </button>
           </div>
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 bg-white flex flex-col">
+        <div className="flex-1 bg-gray-50 flex flex-col">
           {selectedPage ? (
-            <div className="flex-1 flex items-center justify-center p-8">
-              <div className="max-w-4xl w-full">
+            <div className="flex-1 flex items-start justify-center p-4 overflow-auto">
+              <div className="w-full max-w-6xl">
                 {selectedPage.isBlank ? (
-                  <div className="w-full h-[800px] bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center">
+                  <div className="w-full min-h-[600px] bg-white border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center shadow-sm">
                     <div className="text-center">
-                      <div className="text-6xl text-gray-400 mb-4">📄</div>
-                      <h3 className="text-2xl font-semibold text-gray-600 mb-2">Blank Page</h3>
-                      <p className="text-gray-500">This is a blank page that will be included in your PDF</p>
+                      <div className="text-4xl text-gray-400 mb-3">📄</div>
+                      <h3 className="text-xl font-semibold text-gray-600 mb-2">Blank Page</h3>
+                      <p className="text-gray-500 text-sm">This is a blank page that will be included in your PDF</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="relative">
+                  <div className="relative bg-white rounded-lg shadow-sm p-4">
                     <img
-                      src={selectedPage.thumbnailUrl}
+                      src={(selectedPage as EditablePageWithHighRes).highResUrl || selectedPage.thumbnailUrl}
                       alt={`Page ${selectedPage.pageNumber}`}
-                      className="w-full h-auto max-h-[800px] object-contain border border-gray-200 rounded-lg shadow-lg"
+                      className="w-full h-auto max-w-full object-contain mx-auto"
                       style={{ transform: `rotate(${selectedPage.rotation}deg)` }}
                     />
                     {selectedPage.rotation !== 0 && (
-                      <div className="absolute top-4 right-4 bg-gray-800 text-white text-sm font-bold rounded-full h-8 w-8 flex items-center justify-center">
+                      <div className="absolute top-2 right-2 bg-gray-800 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
                         {selectedPage.rotation}°
                       </div>
                     )}
@@ -414,9 +487,9 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ file, onReset }) => {
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-6xl text-gray-400 mb-4">📄</div>
-                <h3 className="text-2xl font-semibold text-gray-600 mb-2">No Page Selected</h3>
-                <p className="text-gray-500">Select a page from the sidebar to view it here</p>
+                <div className="text-4xl text-gray-400 mb-3">📄</div>
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">No Page Selected</h3>
+                <p className="text-gray-500 text-sm">Select a page from the sidebar to view it here</p>
               </div>
             </div>
           )}

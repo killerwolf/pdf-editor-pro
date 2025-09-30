@@ -4,20 +4,24 @@ import LandingPage from './components/LandingPage';
 import PdfEditor from './components/PdfEditor';
 
 const App: React.FC = () => {
-  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [pdfFiles, setPdfFiles] = useState<File[]>([]);
 
   const handleFileSelect = (file: File) => {
-    setPdfFile(file);
+    setPdfFiles([file]);
+  };
+
+  const handleAddPdf = (file: File) => {
+    setPdfFiles(prev => [...prev, file]);
   };
 
   const handleReset = () => {
-    setPdfFile(null);
+    setPdfFiles([]);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 font-sans">
-      {pdfFile ? (
-        <PdfEditor file={pdfFile} onReset={handleReset} />
+      {pdfFiles.length > 0 ? (
+        <PdfEditor files={pdfFiles} onReset={handleReset} onAddPdf={handleAddPdf} />
       ) : (
         <LandingPage onFileSelect={handleFileSelect} />
       )}
