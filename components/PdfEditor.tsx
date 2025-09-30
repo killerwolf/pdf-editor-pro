@@ -29,6 +29,7 @@ interface PdfEditorProps {
 
 interface EditablePageWithHighRes extends EditablePage {
   highResUrl?: string;
+  sourceFileKey?: string;
 }
 
 const EditorHeader: React.FC<{ onReset: () => void; onDownload: () => void; isProcessing: boolean; fileName: string }> = ({ onReset, onDownload, isProcessing, fileName }) => {
@@ -38,10 +39,6 @@ const EditorHeader: React.FC<{ onReset: () => void; onDownload: () => void; isPr
         <h1 className="text-xl font-bold text-gray-800 hidden sm:block">PDF Editor Pro</h1>
         <p className="text-sm text-gray-600 truncate mx-4" title={fileName}>{fileName}</p>
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-          <button onClick={onReset} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors">
-            <UploadIcon className="w-4 h-4" />
-            <span className="hidden sm:inline">New PDF</span>
-          </button>
           <button onClick={onDownload} disabled={isProcessing} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-800 border border-transparent rounded-lg hover:bg-gray-900 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
             <DownloadIcon className="w-4 h-4" />
             {isProcessing ? 'Saving...' : 'Save & Download'}
@@ -184,8 +181,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Loading PDF...');
   const [isProcessing, setIsProcessing] = useState(false);
-  const pdfDocRefs = useRef<any[]>([]); // pdf-lib document instances
-  const pdfjsDocRefs = useRef<any[]>([]); // pdf.js document instances
+  const pdfDocRefs = useRef<Record<string, any>>({}); // pdf-lib document instances keyed by file id
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Update page numbers when pages change
@@ -197,101 +193,80 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
   }, []);
 
   useEffect(() => {
-    const loadPdf = async () => {
-      if (files.length === 0) return;
-      
+    const loadFiles = async () => {
+      if (files.length === 0) {
+        setPages([]);
+        setSelectedPageId(null);
+        pdfDocRefs.current = {};
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      const nextDocRefs: Record<string, any> = {};
+      const nextPages: EditablePageWithHighRes[] = [];
+
       try {
-        // If this is the first file, reset pages. If it's additional files, append to existing pages
-        if (files.length === 1) {
-          setPages([]);
-        }
-        
-        const file = files[files.length - 1]; // Process the most recently added file
-        const arrayBuffer = await file.arrayBuffer();
+        for (const [index, file] of files.entries()) {
+          const fileKey = `${file.name}-${file.lastModified}-${file.size}-${index}`;
+          setLoadingMessage(`Loading ${file.name}...`);
 
-        setLoadingMessage('Loading PDF document...');
-        
-        const pdfjsData = new Uint8Array(arrayBuffer.slice(0));
-        const pdfJSDoc = await pdfjsLib.getDocument({ data: pdfjsData }).promise;
-        const pdfDoc = await PDFDocument.load(arrayBuffer);
-        
-        // Store the PDF documents
-        pdfjsDocRefs.current[files.length - 1] = pdfJSDoc;
-        pdfDocRefs.current[files.length - 1] = pdfDoc;
+          const arrayBuffer = await file.arrayBuffer();
+          const pdfDoc = await PDFDocument.load(arrayBuffer);
+          nextDocRefs[fileKey] = pdfDoc;
 
-        setLoadingMessage(`Generating ${pdfJSDoc.numPages} thumbnails...`);
+          const pdfjsData = new Uint8Array(arrayBuffer.slice(0));
+          const pdfJSDoc = await pdfjsLib.getDocument({ data: pdfjsData }).promise;
 
-        const pagePromises: Promise<EditablePageWithHighRes>[] = [];
-        for (let i = 0; i < pdfJSDoc.numPages; i++) {
-          const pageNum = i + 1;
-          pagePromises.push(
-            (async () => {
-              const page = await pdfJSDoc.getPage(pageNum);
-              
-              // Generate thumbnail (low resolution)
-              const thumbnailViewport = page.getViewport({ scale: 0.3 });
-              const thumbnailCanvas = document.createElement('canvas');
-              const thumbnailContext = thumbnailCanvas.getContext('2d');
-              thumbnailCanvas.height = thumbnailViewport.height;
-              thumbnailCanvas.width = thumbnailViewport.width;
+          setLoadingMessage(`Generating ${pdfJSDoc.numPages} thumbnails for ${file.name}...`);
 
-              if (thumbnailContext) {
-                await page.render({ canvasContext: thumbnailContext, viewport: thumbnailViewport }).promise;
-              }
+          for (let pageIndex = 0; pageIndex < pdfJSDoc.numPages; pageIndex++) {
+            const page = await pdfJSDoc.getPage(pageIndex + 1);
 
-              // Generate high-resolution image for main view
-              const highResViewport = page.getViewport({ scale: 2.0 });
-              const highResCanvas = document.createElement('canvas');
-              const highResContext = highResCanvas.getContext('2d');
-              highResCanvas.height = highResViewport.height;
-              highResCanvas.width = highResViewport.width;
+            const thumbnailViewport = page.getViewport({ scale: 0.3 });
+            const thumbnailCanvas = document.createElement('canvas');
+            const thumbnailContext = thumbnailCanvas.getContext('2d');
+            thumbnailCanvas.height = thumbnailViewport.height;
+            thumbnailCanvas.width = thumbnailViewport.width;
+            if (thumbnailContext) {
+              await page.render({ canvasContext: thumbnailContext, viewport: thumbnailViewport }).promise;
+            }
 
-              if (highResContext) {
-                await page.render({ canvasContext: highResContext, viewport: highResViewport }).promise;
-              }
-              
-              return {
-                id: `page-${Date.now()}-${Math.random().toString(36).substr(2, 9)}-${i}`,
-                originalIndex: i,
-                sourceFileIndex: files.length - 1,
-                rotation: 0,
-                thumbnailUrl: thumbnailCanvas.toDataURL('image/jpeg', 0.8),
-                highResUrl: highResCanvas.toDataURL('image/jpeg', 0.9),
-                isBlank: false,
-                pageNumber: i + 1
-              };
-            })()
-          );
-        }
-        
-        const generatedPages = await Promise.all(pagePromises);
-        const pagesWithNumbers = updatePageNumbers(generatedPages);
-        
-        if (files.length === 1) {
-          // First file - replace all pages
-          setPages(pagesWithNumbers);
-          if (pagesWithNumbers.length > 0) {
-            setSelectedPageId(pagesWithNumbers[0].id);
+            const highResViewport = page.getViewport({ scale: 2.0 });
+            const highResCanvas = document.createElement('canvas');
+            const highResContext = highResCanvas.getContext('2d');
+            highResCanvas.height = highResViewport.height;
+            highResCanvas.width = highResViewport.width;
+            if (highResContext) {
+              await page.render({ canvasContext: highResContext, viewport: highResViewport }).promise;
+            }
+
+            nextPages.push({
+              id: `page-${fileKey}-${pageIndex}`,
+              originalIndex: pageIndex,
+              sourceFileKey: fileKey,
+              rotation: 0,
+              thumbnailUrl: thumbnailCanvas.toDataURL('image/jpeg', 0.8),
+              highResUrl: highResCanvas.toDataURL('image/jpeg', 0.9),
+              isBlank: false,
+              pageNumber: pageIndex + 1,
+            });
           }
-        } else {
-          // Additional file - append pages
-          setPages(prevPages => {
-            const combinedPages = [...prevPages, ...pagesWithNumbers];
-            return updatePageNumbers(combinedPages);
-          });
         }
 
+        pdfDocRefs.current = nextDocRefs;
+        const ordered = updatePageNumbers(nextPages);
+        setPages(ordered);
+        setSelectedPageId(ordered[0]?.id ?? null);
       } catch (error) {
         console.error('Failed to load PDF:', error);
         alert('Failed to load PDF. Please select a valid PDF file.');
-        onReset();
       } finally {
         setLoading(false);
       }
     };
-    
-    loadPdf();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
+    loadFiles();
   }, [files, updatePageNumbers]);
 
   const sensors = useSensors(
@@ -399,8 +374,8 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
           // You can customize the blank page here if needed
         } else {
           // Copy original page from the correct source PDF
-          const sourceFileIndex = pageInfo.sourceFileIndex || 0;
-          const sourcePdfDoc = pdfDocRefs.current[sourceFileIndex];
+          const sourceFileKey = pageInfo.sourceFileKey;
+          const sourcePdfDoc = sourceFileKey ? pdfDocRefs.current[sourceFileKey] : null;
           if (sourcePdfDoc) {
             const [copiedPage] = await newPdfDoc.copyPages(sourcePdfDoc, [pageInfo.originalIndex]);
             const newPage = newPdfDoc.addPage(copiedPage);

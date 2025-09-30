@@ -1,9 +1,13 @@
 
-import React, { useState, useCallback, useRef } from 'react';
-import { UploadIcon, LightningIcon, ShieldIcon, CheckIcon, FileIcon } from './icons';
+import React, { useState, useRef } from 'react';
+import { UploadIcon, LightningIcon, ShieldIcon, CheckIcon, FileIcon, TrashIcon } from './icons';
 
 interface LandingPageProps {
   onFileSelect: (file: File) => void;
+  onRemoveFile: (index: number) => void;
+  onClearQueue: () => void;
+  onEditQueue: () => void;
+  files: File[];
 }
 
 const Header: React.FC = () => {
@@ -26,7 +30,13 @@ const FeatureCard: React.FC<{ icon: React.ReactNode; title: string; children: Re
   </div>
 );
 
-const FileDropzone: React.FC<{ onFileSelect: (file: File) => void }> = ({ onFileSelect }) => {
+const FileDropzone: React.FC<{
+  onFileSelect: (file: File) => void;
+  onRemoveFile: (index: number) => void;
+  onClearQueue: () => void;
+  onEditQueue: () => void;
+  files: File[];
+}> = ({ onFileSelect, onRemoveFile, onClearQueue, onEditQueue, files }) => {
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -49,11 +59,11 @@ const FileDropzone: React.FC<{ onFileSelect: (file: File) => void }> = ({ onFile
     e.stopPropagation();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      if(e.dataTransfer.files[0].type === "application/pdf") {
-          onFileSelect(e.dataTransfer.files[0]);
-      } else {
-          alert("Please drop a PDF file.");
-      }
+      Array.from(e.dataTransfer.files).forEach(file => {
+        if (file.type === 'application/pdf') {
+          onFileSelect(file);
+        }
+      });
       e.dataTransfer.clearData();
     }
   };
@@ -63,40 +73,109 @@ const FileDropzone: React.FC<{ onFileSelect: (file: File) => void }> = ({ onFile
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      onFileSelect(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      Array.from(e.target.files).forEach(file => {
+        if (file.type === 'application/pdf') {
+          onFileSelect(file);
+        }
+      });
     }
   };
 
   return (
-    <div
-      onDragEnter={handleDragEnter}
-      onDragLeave={handleDragLeave}
-      onDragOver={handleDragOver}
-      onDrop={handleDrop}
-      className={`bg-white/50 border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 ${
-        isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-      }`}
-    >
-      <div className="flex items-center justify-center h-16 w-16 rounded-full bg-gray-100 mb-6 mx-auto">
-        <UploadIcon className="w-8 h-8 text-gray-500" />
-      </div>
-      <h3 className="text-xl font-semibold text-gray-800 mb-2">Drop your PDF here</h3>
-      <p className="text-gray-500 mb-6">or click to browse your computer</p>
-      <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".pdf" className="hidden" />
-      <button 
-        onClick={handleButtonClick}
-        className="bg-gray-800 text-white font-medium py-3 px-6 rounded-lg hover:bg-gray-900 transition-colors flex items-center gap-2 mx-auto"
+    <div className="bg-white/70 border border-gray-200 rounded-3xl shadow-sm p-8 transition-all duration-300">
+      <div
+        onDragEnter={handleDragEnter}
+        onDragLeave={handleDragLeave}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        className={`rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-300 ${
+          isDragging ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-white/60'
+        }`}
       >
-        <FileIcon className="w-5 h-5" />
-        Choose PDF File
-      </button>
-      <p className="text-xs text-gray-500 mt-6">Supports PDF files up to 50MB • Completely secure and private</p>
+        <div className="flex items-center justify-center h-14 w-14 rounded-full bg-gray-100 mb-5 mx-auto">
+          <UploadIcon className="w-7 h-7 text-gray-500" />
+        </div>
+        <h3 className="text-lg font-semibold text-gray-800 mb-2">Drag PDFs here</h3>
+        <p className="text-sm text-gray-500 mb-5">or click to browse</p>
+        <input
+          type="file"
+          ref={fileInputRef}
+          onChange={handleFileChange}
+          accept=".pdf"
+          multiple
+          className="hidden"
+        />
+        <button
+          onClick={handleButtonClick}
+          className="bg-gray-800 text-white font-medium py-2.5 px-5 rounded-lg hover:bg-gray-900 transition-colors inline-flex items-center gap-2"
+        >
+          <FileIcon className="w-5 h-5" />
+          Choose files
+        </button>
+        <p className="text-xs text-gray-400 mt-4">Secure & local • Up to 50MB per file • Drop multiple PDFs at once</p>
+      </div>
+
+      <div className="mt-6 border-t border-gray-200 pt-6">
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <span>Queue ({files.length} file{files.length === 1 ? '' : 's'})</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onClearQueue();
+            }}
+            className={`flex items-center gap-1 ${files.length === 0 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-500 hover:text-gray-800'}`}
+            disabled={files.length === 0}
+          >
+            <TrashIcon className="w-4 h-4" /> Clear all
+          </button>
+        </div>
+
+        <div className="mt-3 border border-gray-200 rounded-2xl bg-white/70 min-h-[84px] max-h-40 overflow-y-auto p-3 flex flex-wrap gap-2 content-start">
+          {files.length === 0 ? (
+            <p className="text-xs text-gray-400 mx-auto my-auto">Queue is empty. Drop PDFs to get started.</p>
+          ) : (
+            files.map((file, index) => (
+              <div
+                key={`${file.name}-${file.lastModified}`}
+                className="flex items-center gap-2 px-3 py-2 bg-white border border-gray-200 rounded-xl shadow-xs text-sm text-gray-700 max-w-full"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="truncate max-w-[180px]">{file.name}</span>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveFile(index);
+                  }}
+                  className="text-xs text-gray-400 hover:text-red-500"
+                >
+                  Remove
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEditQueue();
+          }}
+          disabled={files.length === 0}
+          className={`w-full mt-4 py-3 rounded-xl font-medium transition-colors ${
+            files.length === 0
+              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+              : 'bg-gray-900 text-white hover:bg-gray-800'
+          }`}
+        >
+          Go edit {files.length > 0 ? `(${files.length})` : ''}
+        </button>
+      </div>
     </div>
   );
 };
 
-const LandingPage: React.FC<LandingPageProps> = ({ onFileSelect }) => {
+const LandingPage: React.FC<LandingPageProps> = ({ onFileSelect, onRemoveFile, onClearQueue, onEditQueue, files }) => {
   return (
     <>
       <Header />
@@ -126,20 +205,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onFileSelect }) => {
           </div>
         </div>
 
-        <div className="max-w-3xl mx-auto mb-20">
-          <FileDropzone onFileSelect={onFileSelect} />
-        </div>
-
-        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-          <FeatureCard icon={<LightningIcon className="w-6 h-6 text-gray-600" />} title="Reorder without limits">
-            Drag and drop pages, insert blanks, or merge files until everything is in the right spot.
-          </FeatureCard>
-          <FeatureCard icon={<ShieldIcon className="w-6 h-6 text-gray-600" />} title="Stay in control">
-            Nothing is uploaded to a server — edits happen locally for total confidentiality.
-          </FeatureCard>
-          <FeatureCard icon={<CheckIcon className="w-6 h-6 text-gray-600" />} title="Ship it polished">
-            Rotate, refine, and export a clean PDF that’s ready for clients, classmates, or court filings.
-          </FeatureCard>
+        <div className="max-w-3xl mx-auto mb-16">
+          <FileDropzone
+            onFileSelect={onFileSelect}
+            onRemoveFile={onRemoveFile}
+            onClearQueue={onClearQueue}
+            onEditQueue={onEditQueue}
+            files={files}
+          />
         </div>
         
       </main>
