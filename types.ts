@@ -2,10 +2,11 @@
 export interface EditablePage {
   id: string;
   originalIndex: number;
-  sourceFileIndex?: number; // Index of the source PDF file
+  sourceFileKey?: string;
   rotation: number;
   thumbnailUrl: string;
   isBlank?: boolean;
+  blankContent?: string;
   pageNumber: number; // Display page number (1-based)
 }
 

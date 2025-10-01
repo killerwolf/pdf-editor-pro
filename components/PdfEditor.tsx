@@ -32,12 +32,55 @@ interface EditablePageWithHighRes extends EditablePage {
   sourceFileKey?: string;
 }
 
-const EditorHeader: React.FC<{ onReset: () => void; onDownload: () => void; isProcessing: boolean; fileName: string }> = ({ onReset, onDownload, isProcessing, fileName }) => {
+const EditorHeader: React.FC<{
+  documentTitle: string;
+  isRenaming: boolean;
+  onRenameStart: () => void;
+  onRenameChange: (value: string) => void;
+  renameInputRef: React.RefObject<HTMLInputElement>;
+  onRenameSubmit: () => void;
+  onDownload: () => void;
+  isProcessing: boolean;
+}> = ({ documentTitle, isRenaming, onRenameStart, onRenameChange, renameInputRef, onRenameSubmit, onDownload, isProcessing }) => {
   return (
     <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-sm z-10">
       <div className="container mx-auto px-6 py-3 flex justify-between items-center border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-800 hidden sm:block">PDF Editor Pro</h1>
-        <p className="text-sm text-gray-600 truncate mx-4" title={fileName}>{fileName}</p>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-bold text-gray-800 hidden sm:block">PDF Editor Pro</h1>
+          <div className="relative group">
+            {isRenaming ? (
+              <input
+                ref={renameInputRef}
+                defaultValue={documentTitle}
+                onBlur={onRenameSubmit}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    onRenameSubmit();
+                  } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    onRenameSubmit();
+                  }
+                }}
+                onChange={(e) => onRenameChange(e.target.value)}
+                className="px-2 py-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-gray-400"
+                autoFocus
+              />
+            ) : (
+              <button
+                onClick={onRenameStart}
+                className="px-2 py-1 text-sm text-gray-700 bg-white border border-transparent rounded-md hover:border-gray-300 transition-colors"
+              >
+                {documentTitle}
+              </button>
+            )}
+            {!isRenaming && (
+              <span className="absolute left-0 top-full mt-1 whitespace-nowrap text-xs text-white bg-gray-700 rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                Click to rename
+              </span>
+            )}
+          </div>
+        </div>
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           <button onClick={onDownload} disabled={isProcessing} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-gray-800 border border-transparent rounded-lg hover:bg-gray-900 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">
             <DownloadIcon className="w-4 h-4" />
@@ -181,9 +224,13 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('Loading PDF...');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [documentTitle, setDocumentTitle] = useState<string>('Untitled document');
+  const [isRenaming, setIsRenaming] = useState(false);
   const pdfDocRefs = useRef<Record<string, any>>({}); // pdf-lib document instances keyed by file id
   const processedFileKeysRef = useRef<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
+  const blankEditorRef = useRef<HTMLDivElement | null>(null);
 
   // Update page numbers when pages change
   const updatePageNumbers = useCallback((pagesList: EditablePage[]) => {
@@ -240,7 +287,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
           const pdfDoc = await PDFDocument.load(arrayBuffer);
           pdfDocRefs.current[fileKey] = pdfDoc;
 
-          const pdfjsData = new Uint8Array(arrayBuffer.slice(0));
+          const pdfjsData = new Uint8Array(arrayBuffer);
           const pdfJSDoc = await pdfjsLib.getDocument({ data: pdfjsData }).promise;
           setLoadingMessage(`Generating ${pdfJSDoc.numPages} thumbnails for ${file.name}...`);
 
@@ -275,6 +322,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
               thumbnailUrl: thumbnailCanvas.toDataURL('image/jpeg', 0.8),
               highResUrl: highResCanvas.toDataURL('image/jpeg', 0.9),
               isBlank: false,
+              pageNumber: 0, // Will be updated by updatePageNumbers
             });
           }
 
@@ -293,6 +341,14 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
       } finally {
         if (!cancelled) {
           setLoading(false);
+        }
+      }
+
+      if (!documentTitle || documentTitle === 'Untitled document') {
+        const firstFile = files[0];
+        if (firstFile) {
+          const baseName = firstFile.name.replace(/\.pdf$/i, '');
+          setDocumentTitle(baseName);
         }
       }
     };
@@ -368,6 +424,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
       rotation: 0,
       thumbnailUrl: '',
       isBlank: true,
+      blankContent: '',
       pageNumber: afterIndex + 2
     };
 
@@ -376,6 +433,32 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
       newPages.splice(afterIndex + 1, 0, blankPage);
       return updatePageNumbers(newPages);
     });
+  };
+
+  const handleAddBlankAtEnd = () => {
+    const blankPage: EditablePage = {
+      id: `blank-${Date.now()}`,
+      originalIndex: -1,
+      rotation: 0,
+      thumbnailUrl: '',
+      isBlank: true,
+      blankContent: '',
+      pageNumber: pages.length + 1,
+    };
+    setPages(prev => updatePageNumbers([...prev, blankPage]));
+    setSelectedPageId(blankPage.id);
+  };
+
+  const handleBlankContentChange = useCallback((pageId: string, html: string) => {
+    // Ensure the content has proper LTR direction
+    const cleanHtml = html.replace(/dir="[^"]*"/g, '').replace(/style="[^"]*direction[^"]*"/g, '');
+    setPages(prev => prev.map(page => (page.id === pageId ? { ...page, blankContent: cleanHtml } : page)));
+  }, []);
+
+  const applyBlankFormatting = (command: string) => {
+    if (document) {
+      document.execCommand(command, false);
+    }
   };
 
   const handleAddNewPdf = () => {
@@ -394,7 +477,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
   };
   
   const handleDownload = useCallback(async () => {
-    if (pdfDocRefs.current.length === 0 || pages.length === 0) {
+    if (Object.keys(pdfDocRefs.current).length === 0 && pages.every(p => p.isBlank)) {
       alert("There are no pages to save. Please add a PDF.");
       return;
     }
@@ -404,9 +487,19 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
       
       for (const pageInfo of pages) {
         if (pageInfo.isBlank) {
-          // Add a blank page
           const blankPage = newPdfDoc.addPage();
-          // You can customize the blank page here if needed
+          const { width, height } = blankPage.getSize();
+          const content = pageInfo.blankContent?.replace(/<br\s*\/?>(\n)?/gi, '\n').replace(/<[^>]+>/g, '') || '';
+          if (content.trim().length > 0) {
+            blankPage.drawText(content, {
+              x: 50,
+              y: height - 80,
+              size: 14,
+              color: rgb(0, 0, 0),
+              lineHeight: 18,
+              maxWidth: width - 100,
+            });
+          }
         } else {
           // Copy original page from the correct source PDF
           const sourceFileKey = pageInfo.sourceFileKey;
@@ -420,11 +513,11 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
       }
 
       const pdfBytes = await newPdfDoc.save();
-      const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+      const blob = new Blob([pdfBytes as BlobPart], { type: 'application/pdf' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
-      const originalName = files[0]?.name.replace(/\.pdf$/i, '') || 'document';
-      link.download = `${originalName}_edited.pdf`;
+      const safeTitle = (documentTitle || 'document').replace(/[\\/:*?"<>|]+/g, '-');
+      link.download = `${safeTitle}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -436,7 +529,23 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
     } finally {
       setIsProcessing(false);
     }
-  }, [pages, files]);
+  }, [pages, files, documentTitle]);
+
+  const handleRenameStart = () => {
+    setIsRenaming(true);
+    setTimeout(() => {
+      renameInputRef.current?.focus();
+    }, 0);
+  };
+
+  const handleRenameChange = (value: string) => {
+    setDocumentTitle(value);
+  };
+
+  const handleRenameSubmit = () => {
+    setIsRenaming(false);
+    setDocumentTitle(documentTitle);
+  };
 
   const selectedPage = pages.find(page => page.id === selectedPageId);
 
@@ -451,7 +560,24 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
 
   return (
     <>
-      <EditorHeader onReset={onReset} onDownload={handleDownload} isProcessing={isProcessing} fileName={files[0]?.name || 'PDF Document'} />
+      <EditorHeader
+        documentTitle={documentTitle}
+        isRenaming={isRenaming}
+        onRenameStart={() => {
+          setIsRenaming(true);
+          setTimeout(() => renameInputRef.current?.select(), 0);
+        }}
+        onRenameChange={value => setDocumentTitle(value)}
+        renameInputRef={renameInputRef}
+        onRenameSubmit={() => {
+          setIsRenaming(false);
+          if (!documentTitle.trim()) {
+            setDocumentTitle('Untitled document');
+          }
+        }}
+        onDownload={handleDownload}
+        isProcessing={isProcessing}
+      />
       <input
         ref={fileInputRef}
         type="file"
@@ -495,13 +621,20 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
           </div>
           
           {/* Add New PDF Button */}
-          <div className="p-3 border-t border-gray-200">
+          <div className="p-3 border-t border-gray-200 space-y-2">
             <button
               onClick={handleAddNewPdf}
               className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
+              <UploadIcon className="w-3 h-3" />
+              Upload other PDF
+            </button>
+            <button
+              onClick={handleAddBlankAtEnd}
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            >
               <PlusIcon className="w-3 h-3" />
-              Add New PDF
+              Insert blank page
             </button>
           </div>
         </div>
@@ -510,15 +643,54 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
         <div className="flex-1 bg-gray-50 flex flex-col overflow-hidden">
           {selectedPage ? (
             <div className="flex-1 flex items-center justify-center p-4">
-              <div className="w-full h-full max-w-6xl flex items-center justify-center">
+              <div className="w-full h-full max-w-4xl flex flex-col gap-4">
                 {selectedPage.isBlank ? (
-                  <div className="w-full h-full bg-white border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center shadow-sm">
-                    <div className="text-center">
-                      <div className="text-4xl text-gray-400 mb-3">📄</div>
-                      <h3 className="text-xl font-semibold text-gray-600 mb-2">Blank Page</h3>
-                      <p className="text-gray-500 text-sm">This is a blank page that will be included in your PDF</p>
+                  <>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => applyBlankFormatting('bold')}
+                        className="px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
+                      >
+                        Bold
+                      </button>
+                      <button
+                        onClick={() => applyBlankFormatting('italic')}
+                        className="px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
+                      >
+                        Italic
+                      </button>
+                      <button
+                        onClick={() => applyBlankFormatting('underline')}
+                        className="px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
+                      >
+                        Underline
+                      </button>
+                      <button
+                        onClick={() => applyBlankFormatting('insertUnorderedList')}
+                        className="px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
+                      >
+                        • List
+                      </button>
                     </div>
-                  </div>
+                    <div className="flex-1 bg-white border border-gray-200 rounded-lg shadow-sm p-6 overflow-auto">
+                      <div
+                        ref={blankEditorRef}
+                        contentEditable
+                        suppressContentEditableWarning
+                        className="min-h-[400px] outline-none text-gray-800 text-base leading-relaxed"
+                        style={{ 
+                          direction: 'ltr', 
+                          textAlign: 'left',
+                          unicodeBidi: 'normal',
+                          writingMode: 'horizontal-tb',
+                          textDirection: 'ltr'
+                        }}
+                        dir="ltr"
+                        onInput={(e) => handleBlankContentChange(selectedPage.id, (e.target as HTMLDivElement).innerHTML)}
+                        dangerouslySetInnerHTML={{ __html: selectedPage.blankContent || '' }}
+                      />
+                    </div>
+                  </>
                 ) : (
                   <div className="relative bg-white rounded-lg shadow-sm p-2 w-full h-full flex items-center justify-center">
                     <img

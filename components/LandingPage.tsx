@@ -59,7 +59,7 @@ const FileDropzone: React.FC<{
     e.stopPropagation();
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-      Array.from(e.dataTransfer.files).forEach(file => {
+      Array.from(e.dataTransfer.files).forEach((file: File) => {
         if (file.type === 'application/pdf') {
           onFileSelect(file);
         }
@@ -74,7 +74,7 @@ const FileDropzone: React.FC<{
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      Array.from(e.target.files).forEach(file => {
+      Array.from(e.target.files).forEach((file: File) => {
         if (file.type === 'application/pdf') {
           onFileSelect(file);
         }
