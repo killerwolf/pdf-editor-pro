@@ -14,7 +14,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { PDFDocument, rgb, degrees } from 'pdf-lib';
+import { PDFDocument, PDFPage, rgb, degrees } from 'pdf-lib';
 import { EditablePage, PageAction } from '../types';
 import { UploadIcon, RotateIcon, DownloadIcon, TrashIcon, PlusIcon } from './icons';
 
@@ -484,7 +484,28 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
     setIsProcessing(true);
     try {
       const newPdfDoc = await PDFDocument.create();
-      
+
+      // Batch copyPages per source document. pdf-lib only dedupes shared
+      // resources (fonts, images) within a single copyPages call, so copying
+      // one page at a time re-embeds them N times and bloats the output.
+      const pagesBySource = new Map<string, EditablePage[]>();
+      for (const pageInfo of pages) {
+        if (pageInfo.isBlank || !pageInfo.sourceFileKey) continue;
+        const bucket = pagesBySource.get(pageInfo.sourceFileKey) ?? [];
+        bucket.push(pageInfo);
+        pagesBySource.set(pageInfo.sourceFileKey, bucket);
+      }
+      const copiedByPageId = new Map<string, PDFPage>();
+      for (const [fileKey, sourcePages] of pagesBySource) {
+        const sourcePdfDoc = pdfDocRefs.current[fileKey];
+        if (!sourcePdfDoc) continue;
+        const copied = await newPdfDoc.copyPages(
+          sourcePdfDoc,
+          sourcePages.map(p => p.originalIndex)
+        );
+        copied.forEach((page, i) => copiedByPageId.set(sourcePages[i].id, page));
+      }
+
       for (const pageInfo of pages) {
         if (pageInfo.isBlank) {
           const blankPage = newPdfDoc.addPage();
@@ -501,11 +522,8 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
             });
           }
         } else {
-          // Copy original page from the correct source PDF
-          const sourceFileKey = pageInfo.sourceFileKey;
-          const sourcePdfDoc = sourceFileKey ? pdfDocRefs.current[sourceFileKey] : null;
-          if (sourcePdfDoc) {
-            const [copiedPage] = await newPdfDoc.copyPages(sourcePdfDoc, [pageInfo.originalIndex]);
+          const copiedPage = copiedByPageId.get(pageInfo.id);
+          if (copiedPage) {
             const newPage = newPdfDoc.addPage(copiedPage);
             newPage.setRotation(degrees(pageInfo.rotation));
           }
