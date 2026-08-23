@@ -1,6 +1,7 @@
 
 import React, { useState, useRef } from 'react';
 import { UploadIcon, LightningIcon, ShieldIcon, CheckIcon, FileIcon, TrashIcon } from './icons';
+import { Logo } from './Logo';
 
 interface LandingPageProps {
   onFileSelect: (file: File) => void;
@@ -14,7 +15,10 @@ const Header: React.FC = () => {
   return (
     <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-sm z-10">
       <div className="container mx-auto px-6 py-3 flex justify-between items-center border-b border-gray-200">
-        <h1 className="text-xl font-bold text-gray-800">PDF Editor Pro</h1>
+        <div className="flex items-center gap-2">
+          <Logo size={28} />
+          <h1 className="text-xl font-bold text-gray-800">PDF Editor Pro</h1>
+        </div>
       </div>
     </header>
   );

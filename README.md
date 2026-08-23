@@ -1,8 +1,12 @@
+<p align="center">
+  <img src="public/logo.svg" width="88" height="88" alt="PDF Editor Pro" />
+</p>
+
+<h1 align="center">PDF Editor Pro</h1>
+
 <div align="center">
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
-
-# PDF Editor Pro
 
 A fully client-side PDF editor. Drop in one or more PDFs, reorder/rotate/delete pages across them, insert blank pages with text, and export a single merged PDF. Files never leave the browser.
 

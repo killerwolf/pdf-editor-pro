@@ -19,6 +19,7 @@ import * as pdfjsLib from 'pdfjs-dist';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { EditablePage, PageAction } from '../types';
 import { UploadIcon, RotateIcon, DownloadIcon, TrashIcon, PlusIcon } from './icons';
+import { Logo } from './Logo';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = PdfWorker;
 
@@ -47,7 +48,10 @@ const EditorHeader: React.FC<{
     <header className="fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-sm z-10">
       <div className="container mx-auto px-6 py-3 flex justify-between items-center border-b border-gray-200">
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-bold text-gray-800 hidden sm:block">PDF Editor Pro</h1>
+          <div className="hidden sm:flex items-center gap-2">
+            <Logo size={24} />
+            <h1 className="text-xl font-bold text-gray-800">PDF Editor Pro</h1>
+          </div>
           <div className="relative group">
             {isRenaming ? (
               <input
