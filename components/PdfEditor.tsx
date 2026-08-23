@@ -20,6 +20,7 @@ import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { EditablePage, PageAction } from '../types';
 import { UploadIcon, RotateIcon, DownloadIcon, TrashIcon, PlusIcon } from './icons';
 import { Logo } from './Logo';
+import { groupPagesBySource } from '../utils/exportGrouping';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = PdfWorker;
 
@@ -490,16 +491,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
     try {
       const newPdfDoc = await PDFDocument.create();
 
-      // Batch copyPages per source document. pdf-lib only dedupes shared
-      // resources (fonts, images) within a single copyPages call, so copying
-      // one page at a time re-embeds them N times and bloats the output.
-      const pagesBySource = new Map<string, EditablePage[]>();
-      for (const pageInfo of pages) {
-        if (pageInfo.isBlank || !pageInfo.sourceFileKey) continue;
-        const bucket = pagesBySource.get(pageInfo.sourceFileKey) ?? [];
-        bucket.push(pageInfo);
-        pagesBySource.set(pageInfo.sourceFileKey, bucket);
-      }
+      const pagesBySource = groupPagesBySource(pages);
       const copiedByPageId = new Map<string, PDFPage>();
       for (const [fileKey, sourcePages] of pagesBySource) {
         const sourcePdfDoc = pdfDocRefs.current[fileKey];
