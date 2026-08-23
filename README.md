@@ -23,8 +23,9 @@ A fully client-side PDF editor. Drop in one or more PDFs, reorder/rotate/delete 
 - React 19 + TypeScript, bundled with Vite
 - Tailwind CSS v4 (`@tailwindcss/vite`)
 - [`pdf-lib`](https://github.com/Hopding/pdf-lib) for PDF creation, page copying, and export
-- [`pdf.js`](https://mozilla.github.io/pdf.js/) (loaded from CDN in `index.html`) for rendering page thumbnails and previews
+- [`pdf.js`](https://mozilla.github.io/pdf.js/) (`pdfjs-dist`, bundled) for rendering page thumbnails and previews
 - [`@dnd-kit`](https://dndkit.com/) for drag-and-drop reordering
+- [Vitest](https://vitest.dev/) + [Testing Library](https://testing-library.com/) for tests
 
 ## Run locally
 
@@ -36,6 +37,13 @@ npm run dev
 ```
 
 The dev server starts on http://localhost:3000.
+
+## Test
+
+```bash
+npm test         # run the test suite once
+npm run typecheck # type-check without emitting
+```
 
 ## Build
 
