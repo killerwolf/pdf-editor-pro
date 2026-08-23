@@ -38,7 +38,7 @@ const EditorHeader: React.FC<{
   isRenaming: boolean;
   onRenameStart: () => void;
   onRenameChange: (value: string) => void;
-  renameInputRef: React.RefObject<HTMLInputElement>;
+  renameInputRef: React.RefObject<HTMLInputElement | null>;
   onRenameSubmit: () => void;
   onDownload: () => void;
   isProcessing: boolean;
@@ -702,7 +702,6 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
                           textAlign: 'left',
                           unicodeBidi: 'normal',
                           writingMode: 'horizontal-tb',
-                          textDirection: 'ltr'
                         }}
                         dir="ltr"
                         onInput={(e) => handleBlankContentChange(selectedPage.id, (e.target as HTMLDivElement).innerHTML)}
