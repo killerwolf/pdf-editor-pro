@@ -15,11 +15,12 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PDFDocument, PDFPage, rgb, degrees } from 'pdf-lib';
+import * as pdfjsLib from 'pdfjs-dist';
+import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { EditablePage, PageAction } from '../types';
 import { UploadIcon, RotateIcon, DownloadIcon, TrashIcon, PlusIcon } from './icons';
 
-// pdf.js is loaded from CDN, declare its type here
-declare const pdfjsLib: any;
+pdfjsLib.GlobalWorkerOptions.workerSrc = PdfWorker;
 
 interface PdfEditorProps {
   files: File[];
@@ -302,7 +303,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
             thumbnailCanvas.height = thumbnailViewport.height;
             thumbnailCanvas.width = thumbnailViewport.width;
             if (thumbnailContext) {
-              await page.render({ canvasContext: thumbnailContext, viewport: thumbnailViewport }).promise;
+              await page.render({ canvas: thumbnailCanvas, canvasContext: thumbnailContext, viewport: thumbnailViewport }).promise;
             }
 
             const highResViewport = page.getViewport({ scale: 2.0 });
@@ -311,7 +312,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
             highResCanvas.height = highResViewport.height;
             highResCanvas.width = highResViewport.width;
             if (highResContext) {
-              await page.render({ canvasContext: highResContext, viewport: highResViewport }).promise;
+              await page.render({ canvas: highResCanvas, canvasContext: highResContext, viewport: highResViewport }).promise;
             }
 
             generatedPages.push({
