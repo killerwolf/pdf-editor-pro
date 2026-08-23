@@ -58,3 +58,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+const __ci_probe: number = 'not a number';
