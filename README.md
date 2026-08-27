@@ -14,6 +14,9 @@ A fully client-side PDF editor. Drop in one or more PDFs, reorder/rotate/delete 
 
 - Merge multiple PDFs into a single document
 - Compress a document by re-encoding its images, without touching text or layout
+- Split: extract a page range, burst into one file per range or per page (zipped)
+- Export pages as PNG or JPG images (zipped)
+- Drop in JPG/PNG images alongside PDFs — they become pages you can reorder
 - Drag-to-reorder pages across all loaded files
 - Rotate or delete individual pages
 - Insert blank pages with a basic rich-text editor (bold/italic/underline/list)

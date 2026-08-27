@@ -17,7 +17,7 @@ describe('LandingPage', () => {
       />
     );
 
-    expect(screen.getByText('Drag PDFs here')).toBeInTheDocument();
+    expect(screen.getByText('Drag PDFs or images here')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'SqribPDF' })).toBeInTheDocument();
   });
 
@@ -43,7 +43,7 @@ describe('LandingPage', () => {
     expect(onFileSelect).toHaveBeenCalledWith(file);
   });
 
-  it('ignores non-PDF files chosen via the file input', async () => {
+  it('ignores files that are neither PDFs nor images', async () => {
     const user = userEvent.setup();
     const onFileSelect = vi.fn();
     render(

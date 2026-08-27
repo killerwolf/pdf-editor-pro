@@ -13,6 +13,7 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable';
 import { EditablePage } from '../types';
+import { isAcceptedUpload } from '../utils/acceptedUploads';
 import { UploadIcon, PlusIcon } from './icons';
 import { EditorHeader } from './EditorHeader';
 import { SortableThumbnail } from './SortableThumbnail';
@@ -21,6 +22,8 @@ import { usePdfPages } from '../hooks/usePdfPages';
 import { usePdfExport } from '../hooks/usePdfExport';
 import { usePdfCompression } from '../hooks/usePdfCompression';
 import { CompressPanel } from './CompressPanel';
+import { usePdfExportTools } from '../hooks/usePdfExportTools';
+import { ExportPanel } from './ExportPanel';
 
 interface PdfEditorProps {
   files: File[];
@@ -52,6 +55,14 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
 
   const [isCompressOpen, setIsCompressOpen] = useState(false);
   const compression = usePdfCompression(pages, pdfDocRefs, documentTitle);
+
+  const [isExportOpen, setIsExportOpen] = useState(false);
+  const exportTools = usePdfExportTools(pages, pdfDocRefs, documentTitle);
+
+  const openExportPanel = useCallback(() => {
+    exportTools.reset();
+    setIsExportOpen(true);
+  }, [exportTools]);
 
   const openCompressPanel = useCallback(() => {
     // Any result from a previous run was computed against a different page
@@ -143,10 +154,10 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
 
   const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (file && file.type === 'application/pdf') {
+    if (file && isAcceptedUpload(file)) {
       onAddPdf(file);
     } else {
-      alert('Please select a valid PDF file.');
+      alert('Please select a PDF or an image file.');
     }
     // Reset the input so the same file can be selected again
     event.target.value = '';
@@ -198,15 +209,27 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
         }}
         onDownload={handleDownload}
         onCompress={openCompressPanel}
+        onExport={openExportPanel}
         isProcessing={isProcessing}
       />
       <input
         ref={fileInputRef}
         type="file"
-        accept=".pdf"
+        accept=".pdf,image/*"
         onChange={handleFileInputChange}
         className="hidden"
       />
+      {isExportOpen && (
+        <ExportPanel
+          pageCount={pages.length}
+          status={exportTools.status}
+          progress={exportTools.progress}
+          outcome={exportTools.outcome}
+          error={exportTools.error}
+          onRun={exportTools.run}
+          onClose={() => setIsExportOpen(false)}
+        />
+      )}
       {isCompressOpen && (
         <CompressPanel
           status={compression.status}
@@ -260,7 +283,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
               className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-ink bg-surface border border-line-strong rounded-lg hover:bg-surface-2 transition-colors"
             >
               <UploadIcon className="w-3 h-3" />
-              Upload other PDF
+              Add PDF or image
             </button>
             <button
               onClick={handleAddBlankAtEnd}
