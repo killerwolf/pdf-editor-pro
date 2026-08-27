@@ -161,8 +161,8 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
-        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-gray-800"></div>
-        <p className="mt-4 text-lg text-gray-600">{loadingMessage}</p>
+        <div className="w-16 h-16 border-4 border-dashed rounded-full animate-spin border-ink"></div>
+        <p className="mt-4 text-lg text-ink-soft">{loadingMessage}</p>
       </div>
     );
   }
@@ -196,10 +196,10 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
       />
       <div className="flex h-screen pt-16">
         {/* Left Sidebar */}
-        <div className="w-64 bg-gray-50 border-r border-gray-200 flex flex-col">
-          <div className="p-3 border-b border-gray-200">
-            <h2 className="text-base font-semibold text-gray-800">Pages</h2>
-            <p className="text-xs text-gray-600">{pages.length} page{pages.length !== 1 ? 's' : ''}</p>
+        <div className="w-64 bg-surface-2 border-r border-line flex flex-col">
+          <div className="p-3 border-b border-line">
+            <h2 className="text-base font-semibold text-ink">Pages</h2>
+            <p className="text-xs text-ink-soft">{pages.length} page{pages.length !== 1 ? 's' : ''}</p>
           </div>
 
           <div className="flex-1 overflow-y-auto p-3">
@@ -230,17 +230,17 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
           </div>
 
           {/* Add New PDF Button */}
-          <div className="p-3 border-t border-gray-200 space-y-2">
+          <div className="p-3 border-t border-line space-y-2">
             <button
               onClick={handleAddNewPdf}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-ink bg-surface border border-line-strong rounded-lg hover:bg-surface-2 transition-colors"
             >
               <UploadIcon className="w-3 h-3" />
               Upload other PDF
             </button>
             <button
               onClick={handleAddBlankAtEnd}
-              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              className="w-full flex items-center justify-center gap-2 px-3 py-2 text-xs font-medium text-ink bg-surface border border-line-strong rounded-lg hover:bg-surface-2 transition-colors"
             >
               <PlusIcon className="w-3 h-3" />
               Insert blank page
@@ -249,7 +249,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 bg-gray-50 flex flex-col overflow-hidden">
+        <div className="flex-1 bg-surface-2 flex flex-col overflow-hidden">
           {selectedPage ? (
             <div className="flex-1 flex items-center justify-center p-4">
               <div className="w-full h-full max-w-4xl flex flex-col gap-4">
@@ -259,7 +259,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
                     onChange={(html) => handleBlankContentChange(selectedPage.id, html)}
                   />
                 ) : (
-                  <div className="relative bg-white rounded-lg shadow-sm p-2 w-full h-full flex items-center justify-center">
+                  <div className="relative bg-surface rounded-lg shadow-sm p-2 w-full h-full flex items-center justify-center">
                     <img
                       src={(selectedPage as EditablePageWithHighRes).highResUrl || selectedPage.thumbnailUrl}
                       alt={`Page ${selectedPage.pageNumber}`}
@@ -270,7 +270,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
                       }}
                     />
                     {selectedPage.rotation !== 0 && (
-                      <div className="absolute top-2 right-2 bg-gray-800 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
+                      <div className="absolute top-2 right-2 bg-accent text-accent-on text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center">
                         {selectedPage.rotation}°
                       </div>
                     )}
@@ -281,9 +281,9 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
           ) : (
             <div className="flex-1 flex items-center justify-center">
               <div className="text-center">
-                <div className="text-4xl text-gray-400 mb-3">📄</div>
-                <h3 className="text-xl font-semibold text-gray-600 mb-2">No Page Selected</h3>
-                <p className="text-gray-500 text-sm">Select a page from the sidebar to view it here</p>
+                <div className="text-4xl text-ink-faint mb-3">📄</div>
+                <h3 className="text-xl font-semibold text-ink-soft mb-2">No Page Selected</h3>
+                <p className="text-ink-soft text-sm">Select a page from the sidebar to view it here</p>
               </div>
             </div>
           )}

@@ -5,29 +5,40 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <meta name="theme-color" content="#111827" />
+    <meta name="theme-color" content="#f6f7f4" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#101413" media="(prefers-color-scheme: dark)" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>PDF Editor Pro</title>
+    <title>SqribPDF — your files never leave your browser</title>
     <meta
       name="description"
-      content="A fully client-side PDF editor. Merge, reorder, rotate, and delete pages across multiple PDFs, insert blank pages, and export a single polished file. Files never leave your browser."
+      content="Merge, reorder, rotate and export PDFs entirely inside your browser. Nothing is ever uploaded, no account is required, and it keeps working offline."
     />
-    <meta property="og:title" content="PDF Editor Pro" />
+    <meta property="og:title" content="SqribPDF — your files never leave your browser" />
     <meta
       property="og:description"
-      content="Merge, reorder, and rotate PDFs. Export a polished file, entirely in your browser."
+      content="Merge, reorder, rotate and export PDFs. Nothing is ever uploaded."
     />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="https://pdftool.h4md1.fr/" />
-    <meta property="og:image" content="https://pdftool.h4md1.fr/og-image.png" />
+    <meta property="og:url" content="https://sqribpdf.com/" />
+    <meta property="og:image" content="https://sqribpdf.com/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="PDF Editor Pro — merge, reorder, and rotate PDFs in your browser" />
+    <meta property="og:image:alt" content="SqribPDF — merge, reorder and rotate PDFs in your browser" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content="https://pdftool.h4md1.fr/og-image.png" />
+    <meta name="twitter:image" content="https://sqribpdf.com/og-image.png" />
+    <script>
+      // Stamp the stored theme before first paint so a dark-mode viewer never
+      // sees a white flash. Kept inline and tiny for the same reason.
+      try {
+        var t = localStorage.getItem('sqribpdf-theme');
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.setAttribute('data-theme', t);
+        }
+      } catch (e) {}
+    </script>
 <link rel="stylesheet" href="/index.css">
 </head>
-  <body class="bg-gray-50">
+  <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
   </body>

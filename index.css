@@ -1,20 +1,213 @@
 @import 'tailwindcss';
 
-/*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
+/* Self-hosted so the type never costs a third-party round trip: Core Web
+   Vitals carry the SEO strategy, and a privacy-first product should not be
+   calling a font CDN on every page view. */
+@import '@fontsource-variable/archivo';
+@import '@fontsource/ibm-plex-sans/400.css';
+@import '@fontsource/ibm-plex-sans/500.css';
+@import '@fontsource/ibm-plex-sans/600.css';
 
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
+/*
+  SqribPDF design tokens.
+
+  Palette: "ink & ledger". The PDF category is uniformly red (Adobe,
+  iLovePDF, Smallpdf), so the accent is a deep pine green instead — absent
+  from the competitive set, and carrying the ledger/law-library association
+  that suits the target audience.
+
+  Every colour is declared here as a plain custom property and exposed to
+  Tailwind through `@theme inline` below, so the same utility class resolves
+  to the right value in either theme. Never hard-code a colour in a
+  component: add a token here instead.
 */
+:root {
+  --paper: #f6f7f4;
+  --surface: #ffffff;
+  --surface-2: #eef0ea;
+  --surface-3: #e4e8de;
+
+  --ink: #171c1a;
+  --ink-soft: #59635e;
+  --ink-faint: #69736d;
+
+  --line: #dde1da;
+  --line-strong: #c6ccc2;
+
+  --accent: #14624a;
+  --accent-hover: #0e4a38;
+  --accent-soft: #e3efe9;
+  --accent-on: #ffffff;
+
+  --danger: #a83227;
+  --danger-hover: #8a2820;
+  --danger-soft: #fbe9e6;
+
+  --warning: #8a5a0b;
+  --warning-soft: #fbf0dc;
+
+  --success: #1a7a4f;
+  --success-soft: #e3efe9;
+
+  --overlay: rgb(23 28 26 / 0.45);
+  --ring: #14624a;
+}
+
+/* System-default viewers get dark from `prefers-color-scheme`; the guard
+   keeps an explicit light choice winning over a dark OS. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --paper: #101413;
+    --surface: #171c1b;
+    --surface-2: #1f2523;
+    --surface-3: #2a312e;
+
+    --ink: #e6eae7;
+    --ink-soft: #9aa5a0;
+    --ink-faint: #828c86;
+
+    --line: #2c3431;
+    --line-strong: #3d4642;
+
+    --accent: #58c79a;
+    --accent-hover: #74d6ae;
+    --accent-soft: #1b3a2e;
+    --accent-on: #06231a;
+
+    --danger: #e38073;
+    --danger-hover: #ef9a8e;
+    --danger-soft: #3a211d;
+
+    --warning: #d9a955;
+    --warning-soft: #33291a;
+
+    --success: #58c79a;
+    --success-soft: #1b3a2e;
+
+    --overlay: rgb(6 10 9 / 0.6);
+    --ring: #58c79a;
+  }
+}
+
+/* The explicit toggle wins in both directions. */
+:root[data-theme='dark'] {
+  --paper: #101413;
+  --surface: #171c1b;
+  --surface-2: #1f2523;
+  --surface-3: #2a312e;
+
+  --ink: #e6eae7;
+  --ink-soft: #9aa5a0;
+  --ink-faint: #828c86;
+
+  --line: #2c3431;
+  --line-strong: #3d4642;
+
+  --accent: #58c79a;
+  --accent-hover: #74d6ae;
+  --accent-soft: #1b3a2e;
+  --accent-on: #06231a;
+
+  --danger: #e38073;
+  --danger-hover: #ef9a8e;
+  --danger-soft: #3a211d;
+
+  --warning: #d9a955;
+  --warning-soft: #33291a;
+
+  --success: #58c79a;
+  --success-soft: #1b3a2e;
+
+  --overlay: rgb(6 10 9 / 0.6);
+  --ring: #58c79a;
+}
+
+@theme inline {
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-on: var(--accent-on);
+
+  --color-danger: var(--danger);
+  --color-danger-hover: var(--danger-hover);
+  --color-danger-soft: var(--danger-soft);
+
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+
+  --color-overlay: var(--overlay);
+
+  --font-display: 'Archivo Variable', 'Archivo', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'IBM Plex Sans', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
 @layer base {
+  /* Tailwind v4 defaults borders to `currentcolor`; anchor them to the
+     token so a bare `border` class stays theme-aware. */
   *,
   ::after,
   ::before,
   ::backdrop,
   ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
+    border-color: var(--line);
+  }
+
+  html {
+    color-scheme: light dark;
+  }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  /* Keyboard focus must stay visible everywhere: page reordering is the
+     core interaction and it has to be operable without a mouse. */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
+@layer components {
+  /* File sizes and page counts line up in columns. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}

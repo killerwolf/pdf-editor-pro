@@ -1,14 +1,14 @@
 <p align="center">
-  <img src="public/logo.svg" width="88" height="88" alt="PDF Editor Pro" />
+  <img src="public/logo.svg" width="88" height="88" alt="SqribPDF" />
 </p>
 
-<h1 align="center">PDF Editor Pro</h1>
+<h1 align="center">SqribPDF</h1>
 
 <div align="center">
 <img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
 </div>
 
-A fully client-side PDF editor. Drop in one or more PDFs, reorder/rotate/delete pages across them, insert blank pages with text, and export a single merged PDF. Files never leave the browser.
+A fully client-side PDF editor. Drop in one or more PDFs, reorder/rotate/delete pages across them, insert blank pages with text, and export a single merged PDF. **Files never leave the browser** — nothing is uploaded, no account is needed, and it keeps working offline.
 
 ## Features
 
@@ -26,6 +26,24 @@ A fully client-side PDF editor. Drop in one or more PDFs, reorder/rotate/delete 
 - [`pdf.js`](https://mozilla.github.io/pdf.js/) (`pdfjs-dist`, bundled) for rendering page thumbnails and previews
 - [`@dnd-kit`](https://dndkit.com/) for drag-and-drop reordering
 - [Vitest](https://vitest.dev/) + [Testing Library](https://testing-library.com/) for tests
+
+## Design system
+
+Colour, type and radii live as tokens in [`index.css`](index.css). Every token is
+declared once as a plain custom property and exposed to Tailwind through
+`@theme inline`, so a single utility class resolves correctly in either theme.
+
+**Never hard-code a colour in a component** — add a token instead. A raw
+palette class like `bg-gray-200` will not follow the theme and will break dark
+mode.
+
+- Palette: "ink & ledger" — a deep pine-green accent, chosen because the PDF
+  category is uniformly red (Adobe, iLovePDF, Smallpdf).
+- Type: Archivo (display) and IBM Plex Sans (UI), both self-hosted so no font
+  CDN is contacted at runtime.
+- Theming: `prefers-color-scheme` by default; an explicit choice is stamped as
+  `data-theme` on the root element and persisted in `localStorage`.
+- All foreground/background token pairs meet WCAG AA (4.5:1) in both themes.
 
 ## Run locally
 
