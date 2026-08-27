@@ -1,5 +1,5 @@
 import React from 'react';
-import { DownloadIcon } from './icons';
+import { CompressIcon, DownloadIcon } from './icons';
 import { Wordmark } from './Logo';
 import { ThemeToggle } from './ThemeToggle';
 
@@ -11,6 +11,7 @@ interface EditorHeaderProps {
   renameInputRef: React.RefObject<HTMLInputElement | null>;
   onRenameSubmit: () => void;
   onDownload: () => void;
+  onCompress: () => void;
   isProcessing: boolean;
 }
 
@@ -22,6 +23,7 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
   renameInputRef,
   onRenameSubmit,
   onDownload,
+  onCompress,
   isProcessing,
 }) => {
   return (
@@ -67,6 +69,13 @@ export const EditorHeader: React.FC<EditorHeaderProps> = ({
         </div>
         <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
           <ThemeToggle />
+          <button
+            onClick={onCompress}
+            className="flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm font-medium text-ink-soft transition-colors hover:border-line-strong hover:text-ink"
+          >
+            <CompressIcon className="h-4 w-4" />
+            <span className="hidden sm:inline">Compress</span>
+          </button>
           <button onClick={onDownload} disabled={isProcessing} className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-accent-on bg-accent border border-transparent rounded-lg hover:bg-accent-hover transition-colors disabled:bg-ink-faint disabled:cursor-not-allowed">
             <DownloadIcon className="w-4 h-4" />
             {isProcessing ? 'Saving...' : 'Save & Download'}

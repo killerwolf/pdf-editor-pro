@@ -19,6 +19,8 @@ import { SortableThumbnail } from './SortableThumbnail';
 import { BlankPageEditor } from './BlankPageEditor';
 import { usePdfPages } from '../hooks/usePdfPages';
 import { usePdfExport } from '../hooks/usePdfExport';
+import { usePdfCompression } from '../hooks/usePdfCompression';
+import { CompressPanel } from './CompressPanel';
 
 interface PdfEditorProps {
   files: File[];
@@ -47,6 +49,16 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
   );
 
   const { handleDownload, isProcessing } = usePdfExport(pages, pdfDocRefs, documentTitle);
+
+  const [isCompressOpen, setIsCompressOpen] = useState(false);
+  const compression = usePdfCompression(pages, pdfDocRefs, documentTitle);
+
+  const openCompressPanel = useCallback(() => {
+    // Any result from a previous run was computed against a different page
+    // list, so start the panel clean.
+    compression.reset();
+    setIsCompressOpen(true);
+  }, [compression]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -185,6 +197,7 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
           }
         }}
         onDownload={handleDownload}
+        onCompress={openCompressPanel}
         isProcessing={isProcessing}
       />
       <input
@@ -194,6 +207,17 @@ const PdfEditor: React.FC<PdfEditorProps> = ({ files, onReset, onAddPdf }) => {
         onChange={handleFileInputChange}
         className="hidden"
       />
+      {isCompressOpen && (
+        <CompressPanel
+          status={compression.status}
+          progress={compression.progress}
+          report={compression.report}
+          error={compression.error}
+          onCompress={compression.compress}
+          onDownload={compression.download}
+          onClose={() => setIsCompressOpen(false)}
+        />
+      )}
       <div className="flex h-screen pt-16">
         {/* Left Sidebar */}
         <div className="w-64 bg-surface-2 border-r border-line flex flex-col">
