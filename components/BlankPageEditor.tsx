@@ -19,35 +19,35 @@ export const BlankPageEditor: React.FC<BlankPageEditorProps> = ({ content, onCha
       <div className="flex items-center gap-2">
         <button
           onClick={() => applyFormatting('bold')}
-          className="px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
+          className="px-3 py-2 text-xs font-medium text-ink-soft bg-surface border border-line rounded-lg hover:bg-surface-2"
         >
           Bold
         </button>
         <button
           onClick={() => applyFormatting('italic')}
-          className="px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
+          className="px-3 py-2 text-xs font-medium text-ink-soft bg-surface border border-line rounded-lg hover:bg-surface-2"
         >
           Italic
         </button>
         <button
           onClick={() => applyFormatting('underline')}
-          className="px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
+          className="px-3 py-2 text-xs font-medium text-ink-soft bg-surface border border-line rounded-lg hover:bg-surface-2"
         >
           Underline
         </button>
         <button
           onClick={() => applyFormatting('insertUnorderedList')}
-          className="px-3 py-2 text-xs font-medium text-gray-600 bg-white border border-gray-200 rounded-lg hover:bg-gray-100"
+          className="px-3 py-2 text-xs font-medium text-ink-soft bg-surface border border-line rounded-lg hover:bg-surface-2"
         >
           • List
         </button>
       </div>
-      <div className="flex-1 bg-white border border-gray-200 rounded-lg shadow-sm p-6 overflow-auto">
+      <div className="flex-1 bg-surface border border-line rounded-lg shadow-sm p-6 overflow-auto">
         <div
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
-          className="min-h-[400px] outline-none text-gray-800 text-base leading-relaxed"
+          className="min-h-[400px] outline-none text-ink text-base leading-relaxed"
           style={{
             direction: 'ltr',
             textAlign: 'left',

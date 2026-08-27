@@ -41,7 +41,7 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 text-gray-800 font-sans">
+    <div className="min-h-screen bg-paper text-ink font-sans">
       {isEditing ? (
         <PdfEditor files={pdfFiles} onReset={handleReset} onAddPdf={handleAddPdf} />
       ) : (

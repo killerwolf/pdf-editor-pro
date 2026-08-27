@@ -18,7 +18,7 @@ describe('LandingPage', () => {
     );
 
     expect(screen.getByText('Drag PDFs here')).toBeInTheDocument();
-    expect(screen.getByText('PDF Editor Pro')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'SqribPDF' })).toBeInTheDocument();
   });
 
   it('calls onFileSelect for each PDF chosen via the file input', async () => {

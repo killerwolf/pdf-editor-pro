@@ -24,8 +24,8 @@ export const SidebarThumbnail: React.FC<SidebarThumbnailProps> = ({
     <div className="relative group">
       <div
         {...dragProps}
-        className={`bg-white rounded-lg shadow-sm hover:shadow-md transition-all border-2 ${
-          isSelected ? 'border-blue-500 shadow-lg' : 'border-gray-200 hover:border-gray-300'
+        className={`bg-surface rounded-lg shadow-sm hover:shadow-md transition-all border-2 ${
+          isSelected ? 'border-accent shadow-lg' : 'border-line hover:border-line-strong'
         }`}
         onClick={onSelect}
       >
@@ -34,8 +34,8 @@ export const SidebarThumbnail: React.FC<SidebarThumbnailProps> = ({
         >
           <div className="p-1.5">
             {page.isBlank ? (
-              <div className="w-full aspect-[3/4] bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300">
-                <span className="text-gray-500 text-xs font-medium">Blank</span>
+              <div className="w-full aspect-[3/4] bg-surface-2 rounded flex items-center justify-center border-2 border-dashed border-line-strong">
+                <span className="text-ink-soft text-xs font-medium">Blank</span>
               </div>
             ) : (
               <img
@@ -47,32 +47,32 @@ export const SidebarThumbnail: React.FC<SidebarThumbnailProps> = ({
             )}
           </div>
           <div className="flex items-center justify-between p-1.5 pt-0">
-            <span className="text-xs font-medium text-gray-700">Page {page.pageNumber}</span>
+            <span className="text-xs font-medium text-ink">Page {page.pageNumber}</span>
             <div className="flex items-center opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onRotate();
                 }}
-                className="p-1 rounded-full hover:bg-gray-200 transition-colors"
+                className="p-1 rounded-full hover:bg-surface-3 transition-colors"
                 title="Rotate 90°"
               >
-                <RotateIcon className="w-3 h-3 text-gray-600" />
+                <RotateIcon className="w-3 h-3 text-ink-soft" />
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   onDelete();
                 }}
-                className="p-1 rounded-full hover:bg-red-100 transition-colors"
+                className="p-1 rounded-full hover:bg-danger-soft transition-colors"
                 title="Delete Page"
               >
-                <TrashIcon className="w-3 h-3 text-red-600" />
+                <TrashIcon className="w-3 h-3 text-danger" />
               </button>
             </div>
           </div>
           {page.rotation !== 0 && (
-            <div className="absolute top-3 right-3 bg-gray-800 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center pointer-events-none">
+            <div className="absolute top-3 right-3 bg-accent text-accent-on text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center pointer-events-none">
               {page.rotation}°
             </div>
           )}

@@ -5,7 +5,9 @@ import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
   server: {
-    port: 3000,
+    // Defaults to the documented 3000, but yields to PORT so a second
+    // checkout (or a preview runner) can start without a clash.
+    port: Number(process.env.PORT) || 3000,
     host: '0.0.0.0',
   },
   plugins: [
