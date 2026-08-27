@@ -3,6 +3,7 @@ import React, { useState, useRef } from 'react';
 import { UploadIcon, LightningIcon, ShieldIcon, CheckIcon, FileIcon, TrashIcon } from './icons';
 import { Wordmark } from './Logo';
 import { ThemeToggle } from './ThemeToggle';
+import { isAcceptedUpload } from '../utils/acceptedUploads';
 
 interface LandingPageProps {
   onFileSelect: (file: File) => void;
@@ -65,7 +66,7 @@ const FileDropzone: React.FC<{
     setIsDragging(false);
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       Array.from(e.dataTransfer.files).forEach((file: File) => {
-        if (file.type === 'application/pdf') {
+        if (isAcceptedUpload(file)) {
           onFileSelect(file);
         }
       });
@@ -80,7 +81,7 @@ const FileDropzone: React.FC<{
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       Array.from(e.target.files).forEach((file: File) => {
-        if (file.type === 'application/pdf') {
+        if (isAcceptedUpload(file)) {
           onFileSelect(file);
         }
       });
@@ -102,13 +103,13 @@ const FileDropzone: React.FC<{
           <div className="flex items-center justify-center h-14 w-14 rounded-full bg-surface-2 mb-5 mx-auto">
             <UploadIcon className="w-7 h-7 text-ink-soft" />
           </div>
-          <h3 className="text-lg font-semibold text-ink mb-2">Drag PDFs here</h3>
+          <h3 className="text-lg font-semibold text-ink mb-2">Drag PDFs or images here</h3>
           <p className="text-sm text-ink-soft mb-5">or click to browse</p>
           <input
             type="file"
             ref={fileInputRef}
             onChange={handleFileChange}
-            accept=".pdf"
+            accept=".pdf,image/*"
             multiple
             className="hidden"
           />
@@ -119,7 +120,7 @@ const FileDropzone: React.FC<{
             <FileIcon className="w-5 h-5" />
             Choose files
           </button>
-          <p className="text-xs text-ink-faint mt-4">Secure & local • Up to 50MB per file • Drop multiple PDFs at once</p>
+          <p className="text-xs text-ink-faint mt-4">Stays on your device • PDF, JPG, PNG • Drop as many as you like</p>
         </div>
       </div>
     );
@@ -146,8 +147,8 @@ const FileDropzone: React.FC<{
               <UploadIcon className="w-6 h-6 text-ink-soft" />
             </div>
             <div className="text-left">
-              <h3 className="text-sm font-semibold text-ink">Add more PDFs</h3>
-              <p className="text-xs text-ink-soft">Drag files here or click to select from your computer.</p>
+              <h3 className="text-sm font-semibold text-ink">Add more files</h3>
+              <p className="text-xs text-ink-soft">Drag PDFs or images here, or click to select from your computer.</p>
             </div>
           </div>
           <div className="flex items-center gap-3 text-sm">
@@ -163,7 +164,7 @@ const FileDropzone: React.FC<{
           type="file"
           ref={fileInputRef}
           onChange={handleFileChange}
-          accept=".pdf"
+          accept=".pdf,image/*"
           multiple
           className="hidden"
         />

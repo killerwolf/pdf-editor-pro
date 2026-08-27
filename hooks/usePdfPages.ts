@@ -3,6 +3,7 @@ import { PDFDocument } from 'pdf-lib';
 import * as pdfjsLib from 'pdfjs-dist';
 import PdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { EditablePage } from '../types';
+import { imageFileToPdfBytes, isSupportedImage } from '../utils/imagesToPdf';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = PdfWorker;
 
@@ -79,12 +80,27 @@ export function usePdfPages(
           const fileKey = `${file.name}-${file.lastModified}-${file.size}`;
           setLoadingMessage(`Loading ${file.name}...`);
 
-          const arrayBuffer = await file.arrayBuffer();
-          const pdfDoc = await PDFDocument.load(arrayBuffer);
+          // Images are wrapped into a one-page PDF up front, so everything
+          // downstream — thumbnails, reordering, export — treats them as
+          // ordinary pages.
+          let sourceBytes: Uint8Array;
+          if (isSupportedImage(file)) {
+            const converted = await imageFileToPdfBytes(file);
+            if (!converted) {
+              console.warn(`Could not read ${file.name} as an image; skipping it.`);
+              processedFileKeysRef.current.add(fileKey);
+              continue;
+            }
+            sourceBytes = converted;
+          } else {
+            sourceBytes = new Uint8Array(await file.arrayBuffer());
+          }
+
+          const pdfDoc = await PDFDocument.load(sourceBytes);
           pdfDocRefs.current[fileKey] = pdfDoc;
 
-          const pdfjsData = new Uint8Array(arrayBuffer);
-          const pdfJSDoc = await pdfjsLib.getDocument({ data: pdfjsData }).promise;
+          // pdf.js takes ownership of the buffer it is given.
+          const pdfJSDoc = await pdfjsLib.getDocument({ data: sourceBytes.slice() }).promise;
           setLoadingMessage(`Generating ${pdfJSDoc.numPages} thumbnails for ${file.name}...`);
 
           const generatedPages: EditablePageWithHighRes[] = [];
@@ -143,7 +159,7 @@ export function usePdfPages(
       if (!documentTitle || documentTitle === 'Untitled document') {
         const firstFile = files[0];
         if (firstFile) {
-          const baseName = firstFile.name.replace(/\.pdf$/i, '');
+          const baseName = firstFile.name.replace(/\.[^.]+$/, '');
           setDocumentTitle(baseName);
         }
       }
